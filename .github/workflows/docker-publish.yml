@@ -1,0 +1,51 @@
+name: Publish and Sign Container Image
+
+on:
+  schedule:
+    - cron: '32 11 * * *'
+  push:
+    branches: [ main ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@main
+        with:
+          cosign-release: 'v2.0.0'
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log into ghcr.io
+        uses: docker/login-action@master
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push container image
+        id: push-step
+        uses: docker/build-push-action@master
+        with:
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
+
+      - name: Sign the images with GitHub OIDC Token **not production ready**
+        run: cosign sign --yes ${TAGS}
+        env:
+          TAGS: ${{ steps.docker_meta.outputs.tags }}
