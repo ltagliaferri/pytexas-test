@@ -45,7 +45,6 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:latest
 
-      - name: Sign the images with GitHub OIDC Token **not production ready**
-        run: cosign sign --yes ${TAGS}
+      - name: Sign the container image
         env:
-          TAGS: ${{ steps.docker_meta.outputs.tags }}
+        run: cosign sign ghcr.io/${{ github.repository }}@${{ steps.push-step.outputs.digest }}
